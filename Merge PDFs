@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Check if there are at least two files selected
+if [ "$#" -lt 2 ]; then
+    zenity --error --text="Please select at least two PDF files."
+    exit 1
+fi
+
+# Ask the user for the name of the output file
+OUTPUT_FILE=$(zenity --file-selection --save --confirm-overwrite --title="Save Merged PDF As" --file-filter="PDF files (pdf) | *.pdf")
+
+# If the user cancels the save dialog, exit the script
+if [ -z "$OUTPUT_FILE" ]; then
+    exit 1
+fi
+
+# Merge the PDFs using pdfunite
+pdfunite "$@" "$OUTPUT_FILE"
+
+# Notify the user of the successful merge
+if [ $? -eq 0 ]; then
+    zenity --info --text="PDFs successfully merged into $OUTPUT_FILE"
+else
+    zenity --error --text="Failed to merge PDFs"
+fi
