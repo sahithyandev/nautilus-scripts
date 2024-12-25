@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Check if ImageMagick's convert is installed
+if ! command -v convert &> /dev/null
+then
+    zenity --error --text="ImageMagick (convert) is not installed. Please install it to use this script."
+    exit 1
+fi
+
+# Create an output PDF file name using the current date and time
+output_file="$(date +"%Y-%m-%d_%H-%M-%S").pdf"
+
+# Sort the selected files to ensure correct order
+sorted_files=$(printf "%s\n" "$@" | sort)
+
+# Merge sorted image files into a PDF
+eval convert $sorted_files "$output_file"
+
+# Notify the user
+if [ $? -eq 0 ]; then
+    notify-send "Images to PDF" "PDF created successfully: $output_file"
+else
+    zenity --error --text="Failed to create the PDF."
+fi

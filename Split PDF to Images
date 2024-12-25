@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Check if a PDF file is selected
+if [ -z "$1" ]; then
+    zenity --error --text="No PDF file selected."
+    exit 1
+fi
+
+# Get the selected PDF file and its directory
+PDF_FILE="$1"
+OUTPUT_DIR="$(dirname "$PDF_FILE")/$(basename "$PDF_FILE" .pdf)_images"
+
+# Create the output directory
+mkdir -p "$OUTPUT_DIR"
+
+# Convert each page of the PDF to an image
+pdftoppm -jpeg "$PDF_FILE" "$OUTPUT_DIR/page"
+
+# Notify the user
+zenity --info --text="PDF split into images successfully in $OUTPUT_DIR"

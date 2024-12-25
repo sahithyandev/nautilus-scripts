@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# Check if tesseract is installed
+if ! command -v tesseract &> /dev/null; then
+    zenity --error --text="Tesseract OCR is not installed. Please install it and try again."
+    exit 1
+fi
+
+# Ask for the language input
+LANGUAGE=$(zenity --entry --title="OCR Language Input" --text="Enter the OCR language (e.g., eng for English):")
+
+# Check if the user entered a language
+if [ -z "$LANGUAGE" ]; then
+    zenity --error --text="No language entered. Exiting."
+    exit 1
+fi
+
+# Loop through all selected files
+for FILE in "$@"; do
+    # Check if the file is a JPEG image
+    if [[ "$FILE" =~ \.jpe?g$ ]]; then
+        # Generate the output text file name
+        OUTPUT_FILE="${FILE%.*}.txt"
+
+        # Perform OCR on the image
+        tesseract "$FILE" "$OUTPUT_FILE" -l "$LANGUAGE" txt
+
+        # Notify the user
+        zenity --info --text="OCR complete for $FILE. Output saved to ${OUTPUT_FILE}.txt"
+    else
+        zenity --error --text="$FILE is not a JPEG image."
+    fi
+done
+
