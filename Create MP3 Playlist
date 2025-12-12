@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+FILES=()
+for f in "$@"; do
+  [[ ${f,,} == *.mp3 ]] && FILES+=("$f")
+done
+
+[ "${#FILES[@]}" -eq 0 ] && exit 0
+
+OUT_DIR="$(dirname -- "${FILES[0]}")"
+TIMESTAMP="$(date +'%Y%m%d-%H%M%S')"
+OUT_FILE="$OUT_DIR/playlist-$TIMESTAMP.m3u"
+
+IFS=$'\n' FILES=($(LC_ALL=C sort <<<"${FILES[*]}"))
+unset IFS
+
+{
+  echo "#EXTM3U"
+  for f in "${FILES[@]}"; do
+    rel="$(realpath --relative-to="$OUT_DIR" "$f")"
+    echo "$rel"
+  done
+} > "$OUT_FILE"
+
+notify-send "M3U Playlist" "Created $(basename "$OUT_FILE")"
+
