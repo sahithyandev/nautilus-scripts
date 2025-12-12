@@ -1,0 +1,139 @@
+#!/usr/bin/env bash
+set -u
+
+# Match MassTamilan and MassTamilan.<tld>
+CLEAN_REGEX='MassTamilan(\.[A-Za-z]+)?'
+
+first_file="$1"
+base_dir="$(dirname -- "$first_file")"
+
+timestamp="$(date '+%Y-%m-%d_%H-%M-%S')"
+output_dir="$base_dir/Cleaned_MP3_$timestamp"
+
+mkdir -p -- "$output_dir"
+
+echo "=== MP3 MassTamilan cleanup started ==="
+echo "Files received: $#"
+echo "Output directory: $output_dir"
+echo
+
+ok=0
+fail=0
+skipped=0
+
+for file in "$@"; do
+  echo "----------------------------------------"
+  echo "FILE: $file"
+
+  if [[ "${file,,}" != *.mp3 ]]; then
+    echo "SKIP: not an mp3"
+    skipped=$((skipped+1))
+    continue
+  fi
+
+  base="$(basename -- "$file")"
+
+  # ---- Filename cleanup ----
+  clean_base="$(printf '%s' "$base" | sed -E "
+      s/${CLEAN_REGEX}//gI;
+      s/[-_.]+\.mp3$/.mp3/i;
+      s/[-_.]{2,}/-/g;
+      s/^[-_.]+//;
+      s/[-_.]+$//
+    ")"
+
+  if [[ -z "$clean_base" || "$clean_base" == ".mp3" ]]; then
+    echo "FAIL: cleaned filename invalid -> '$clean_base'"
+    fail=$((fail+1))
+    continue
+  fi
+
+  echo "Output name: $clean_base"
+
+  tmp="$(mktemp --suffix=.mp3)"
+
+  # ---- Metadata cleanup ----
+  metadata_args=()
+  changed=0
+  total=0
+
+  while IFS='=' read -r key val; do
+    key="${key#TAG:}"
+    total=$((total+1))
+
+    clean_val="$(printf '%s' "$val" | sed -E "
+	    s/${CLEAN_REGEX}//gI;
+	    s/[[:space:]]*[-_.]+[[:space:]]*$//;
+	    s/^[[:space:]]*[-_.]+[[:space:]]*//;
+	    s/[[:space:]]{2,}/ /g;
+	    s/[[:space:]]+$//;
+	    s/^[[:space:]]+//
+	")"
+
+    if [[ "$clean_val" != "$val" ]]; then
+      echo "  TAG change: $key"
+      printf '    OLD: %.100s\n' "$val"
+      printf '    NEW: %.100s\n' "$clean_val"
+      changed=$((changed+1))
+    fi
+
+    metadata_args+=("-metadata" "$key=$clean_val")
+  done < <(
+    ffprobe -v error \
+      -show_entries format_tags \
+      -of default=nw=1 "$file"
+  )
+
+  echo "Metadata inspected: $total"
+  echo "Metadata changed:   $changed"
+
+  echo "Running ffmpeg (no re-encode, keep cover art)..."
+
+  if ffmpeg -y -hide_banner -loglevel error \
+      -i "$file" \
+      -map 0:a -map 0:v? \
+      -map_metadata -1 \
+      -c copy \
+      "${metadata_args[@]}" \
+      "$tmp"; then
+
+    if [[ ! -s "$tmp" ]]; then
+      echo "FAIL: ffmpeg output file missing or empty"
+      rm -f -- "$tmp"
+      fail=$((fail+1))
+      continue
+    fi
+
+    target="$output_dir/$clean_base"
+
+    if [[ -e "$target" ]]; then
+      echo "FAIL: output file already exists -> $target"
+      rm -f -- "$tmp"
+      fail=$((fail+1))
+      continue
+    fi
+
+    mv -- "$tmp" "$target"
+    echo "OK -> $target"
+    ok=$((ok+1))
+
+  else
+    echo "FAIL: ffmpeg error"
+    rm -f -- "$tmp"
+    fail=$((fail+1))
+  fi
+done
+
+echo
+echo "=== Cleanup finished ==="
+echo "OK:      $ok"
+echo "FAILED:  $fail"
+echo "SKIPPED: $skipped"
+echo "OUTPUT:  $output_dir"
+
+if command -v zenity >/dev/null 2>&1; then
+  zenity --info \
+    --title="MP3 Cleanup Finished" \
+    --text="Cleanup completed.\n\nProcessed successfully: $ok\nFailed: $fail\nSkipped: $skipped\n\nOutput folder:\n$output_dir"
+fi
+
