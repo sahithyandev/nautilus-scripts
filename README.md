@@ -1,6 +1,51 @@
 # Documentation
 
-This repository contains several useful Nautilus scripts to enhance your file management experience. Below is the documentation for each script.
+This repository contains a few useful Nautilus scripts to enhance your file management experience. Below is the documentation for each script.
+
+## Installation
+
+You can install the scripts on your device by:
+- downloading the desired script file(s)
+- placing the script(s) in `~/.local/share/nautilus/scripts`   
+	If no such directory exists, create one.
+	
+## Clean MP3 Tags
+
+This script cleans up MP3 filenames and metadata, especially removing references to specific website(s) and similar tags.
+
+⚠️ It's fairly new. Use with caution. 
+
+### Usage
+1. Select one or more MP3 files.
+2. Run the `Clean MP3 Tags` script.
+3. The script will:
+   - Remove unwanted text (like "MassTamilan") from filenames and metadata tags.
+   - Save cleaned files in a new folder named `Cleaned_MP3_<timestamp>` in the same directory as the originals.
+   - Show a summary of processed, failed, and skipped files.
+   - Optionally display a completion dialog if Zenity is installed.
+
+### Requirements
+- `ffmpeg`
+- `ffprobe`
+- `zenity` (optional, for GUI notifications)
+
+## Create MP3 Playlist
+
+This script generates an M3U playlist from selected MP3 files.
+
+⚠️ It's fairly new. Use with caution. 
+
+### Usage
+1. Select the MP3 files you want in the playlist.
+2. Run the `Create MP3 Playlist` script.
+3. The script will:
+   - Sort the selected MP3 files alphabetically.
+   - Create a playlist file named `playlist-<timestamp>.m3u` in the same directory as the first selected file.
+   - Notify you when the playlist is created.
+
+### Requirements
+- `realpath`
+- `notify-send`
 
 ## Images to PDF
 
